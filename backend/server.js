@@ -17,6 +17,9 @@ app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/books', require('./routes/books'));
 app.use('/api/borrows', require('./routes/borrows'));
 app.use('/api/classes', require('./routes/classes'));
+app.use('/api/computers', require('./routes/computers'));
+app.use('/api/computer-borrows', require('./routes/computerBorrows'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Trigger nodemon reload now

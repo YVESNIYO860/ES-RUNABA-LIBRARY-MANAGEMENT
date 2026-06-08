@@ -9,6 +9,27 @@ import Returns from './pages/Returns'
 import Login from './pages/Login'
 import Sidebar from './components/Sidebar'
 
+// New Computer Lab Manager pages
+import ComputerDashboard from './pages/ComputerDashboard'
+import Computers from './pages/Computers'
+import ComputerBorrow from './pages/ComputerBorrow'
+import ComputerReturns from './pages/ComputerReturns'
+
+// Pure JS JWT decoder
+function decodeToken(token) {
+  if (!token) return null
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+    return JSON.parse(jsonPayload)
+  } catch (e) {
+    return null
+  }
+}
+
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token'))
 
@@ -39,9 +60,30 @@ export default function App() {
     )
   }
 
+  const decoded = decodeToken(token)
+  const role = decoded ? decoded.role : 'librarian'
+
+  if (role === 'computer_manager') {
+    return (
+      <div className="app">
+        <Sidebar onLogout={handleLogout} role={role} />
+        <main className="main">
+          <Routes>
+            <Route path="/" element={<ComputerDashboard />} />
+            <Route path="/computers" element={<Computers />} />
+            <Route path="/teachers" element={<Teachers />} />
+            <Route path="/borrow" element={<ComputerBorrow />} />
+            <Route path="/returns" element={<ComputerReturns />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
-      <Sidebar onLogout={handleLogout} />
+      <Sidebar onLogout={handleLogout} role={role} />
       <main className="main">
         <Routes>
           <Route path="/" element={<Dashboard />} />
