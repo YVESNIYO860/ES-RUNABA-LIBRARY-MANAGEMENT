@@ -1,0 +1,87 @@
+body{ margin:0; font-family:Arial,Helvetica,sans-serif; background:#f5f7fb; }
+.app{ display:flex; min-height:100vh }
+.sidebar{ width:240px; background:#0b5394; color:#fff; padding:20px; flex-shrink:0 }
+.sidebar-header{ display:flex; justify-content:space-between; align-items:center; gap:12px }
+.brand{ display:flex; align-items:center; gap:10px }
+.brand-logo{ width:34px; height:34px; object-fit:contain; border-radius:6px; }
+.sidebar h2{ margin:0 0 10px }
+.sidebar .nav-toggle{ display:none; background:#fff; border:1px solid rgba(255,255,255,.9); color:#0b5394; font-size:1.5rem; cursor:pointer; border-radius:10px; width:48px; height:48px; line-height:1; align-items:center; justify-content:center; padding:0; min-width:48px; min-height:48px; }
+.sidebar nav a{ display:block; color:#fff; margin:8px 0; text-decoration:none }
+.sidebar nav a.active{ font-weight:700; color:#ffeb3b }
+.main{ flex:1; padding:20px }
+.card{ background:#fff; padding:16px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.1); margin-bottom:16px }
+.card.small{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+.page-header{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px }
+.page-header h2{ margin:0 }
+.page-header .action-note{ max-width:320px; color:#4d5e77; font-size:0.95rem; line-height:1.5 }
+.section-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:18px; margin-bottom:18px }
+.teacher-form{ display:grid; gap:10px }
+.teacher-form input{ width:100% }
+.large{ font-size:2rem; margin:8px 0 0; font-weight:700; color:#0b5394 }
+.badge{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:.82rem; letter-spacing:.02em; text-transform:uppercase; }
+.badge-success{ background:rgba(56,142,60,.12); color:#387d3c }
+.badge-danger{ background:rgba(192,57,43,.12); color:#c0392b }
+.empty-state{ padding:28px 16px; border:1px dashed rgba(11,83,148,.3); border-radius:12px; color:#4d5e77; background:rgba(11,83,148,.04); text-align:center }
+.error-banner{ margin:18px 0; padding:16px; border-radius:12px; background:rgba(192,57,43,.12); color:#c0392b; border:1px solid rgba(192,57,43,.2); }
+.list-header{ display:flex; flex-direction:column; gap:12px; margin-bottom:12px }
+.list-header h3{ margin:0 }
+.small-button{ background:#ffeb3b; color:#0b5394; padding:8px 12px; border-radius:8px; font-size:.95rem }
+.return-book-title{ font-weight:600; margin-bottom:4px }
+.return-book-note{ color:#4d5e77; font-size:.9rem }
+
+.table{ width:100%; border-collapse:collapse; display:block; overflow-x:auto }
+.table th, .table td{ text-align:left; padding:12px; border-bottom:1px solid #eee; white-space:nowrap }
+.login-page{ display:flex; min-height:100vh; align-items:center; justify-content:center; padding:20px }
+.login-page .card{ width:100%; max-width:360px }
+input, select{ padding:10px; margin:8px 0; width:100%; box-sizing:border-box; border:1px solid #ccd0db; border-radius:6px }
+button{ cursor:pointer; border:none; border-radius:6px; background:#0b5394; color:#fff; padding:10px 14px }
+button:hover{ opacity:.95 }
+.row{ display:flex; gap:16px }
+.col{ flex:1 }
+.list{ max-height:340px; overflow:auto }
+.list-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 0 }
+.cart-row{ display:flex; gap:8px; align-items:center; margin:10px 0; flex-wrap:wrap }
+.cards{ display:flex; gap:12px; flex-wrap:wrap }
+.cards .card{ padding:14px; flex:1; min-width:160px }
+.logout{ margin-top:24px; background:#c0392b; color:#fff; border:none; padding:10px 12px; width:100%; text-align:left }
+.meta{ margin:12px 0 18px; color:#4d5e77; font-size:0.95rem }
+.search{ width:100%; max-width:420px; padding:10px 12px; border-radius:10px; border:1px solid rgba(15,71,133,.16); margin-bottom:18px; box-shadow:0 8px 24px rgba(11,83,148,.04); }
+
+.loader-overlay{ position:fixed; inset:0; background:rgba(10,22,55,.68); display:flex; align-items:center; justify-content:center; z-index:9999 }
+.loader-card{ background:#fff; color:#0b5394; padding:24px 28px; border-radius:16px; box-shadow:0 16px 40px rgba(0,0,0,.18); display:flex; align-items:center; gap:18px; max-width:360px; width:100%; text-align:left }
+.loader-spinner{ width:48px; height:48px; border:5px solid rgba(11,83,148,.15); border-top-color:#0b5394; border-radius:50%; animation:spin 1s linear infinite }
+.loader-message strong{ display:block; margin-bottom:8px; font-size:1rem }
+.loader-message p{ margin:0; font-size:0.95rem; color:#4d5e77 }
+.loader-progress{ width:100%; height:10px; background:rgba(11,83,148,.1); border-radius:999px; overflow:hidden; margin:12px 0 8px }
+.loader-progress-bar{ height:100%; background:#0b5394; width:0%; transition:width .2s ease }
+.loader-message small{ color:#6b7b96; display:block }
+@keyframes spin{ to{ transform:rotate(360deg) } }
+
+@media (max-width: 600px) {
+  .app{ flex-direction:column }
+  .sidebar{ width:100%; padding:12px 16px; overflow:visible }
+  .sidebar-header{ display:flex; justify-content:space-between; align-items:center }
+  .sidebar h2{ margin:0; font-size:1.1rem }
+  .sidebar .nav-toggle{ display:flex }
+  .sidebar nav{ max-height:0; opacity:0; overflow:hidden; flex-direction:column; gap:8px; margin-top:12px; transition:max-height .35s ease, opacity .35s ease }
+  .sidebar.open nav{ max-height:320px; opacity:1 }
+  .sidebar nav a{ margin:0; padding:10px; border-radius:6px; background:rgba(255,255,255,.08) }
+  .sidebar.open .nav-toggle{ background:#ffeb3b; color:#0b5394 }
+  .main{ padding:16px }
+  .row{ flex-direction:column }
+  .card.small{ flex-direction:column; align-items:stretch }
+  .table th, .table td{ padding:10px }
+  .cards{ flex-direction:column }
+}
+
+@media (max-width: 600px) {
+  .sidebar nav a{ flex:1 1 100%; text-align:left }
+  .logout{ margin-top:12px }
+  .list-item{ flex-direction:column; align-items:flex-start }
+  .cart-row{ flex-direction:column; align-items:flex-start }
+}
+
+@media (min-width: 601px) {
+  .sidebar .nav-toggle { display: none !important; }
+  .sidebar nav { max-height: none !important; opacity: 1 !important; overflow: visible !important; }
+}
