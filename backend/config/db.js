@@ -8,7 +8,21 @@ try {
   console.warn('Could not set custom DNS servers, using system default', dnsErr.message);
 }
 
-const uri = process.env.MONGO_URI || '';
+// Smart URI selection based on environment
+const getMongoURI = () => {
+  // Priority: MONGO_URI (for backward compatibility), then MONGO_URI_PRODUCTION (production), then MONGO_URI_LOCAL (development)
+  if (process.env.MONGO_URI) {
+    return process.env.MONGO_URI;
+  }
+  
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.MONGO_URI_PRODUCTION;
+  } else {
+    return process.env.MONGO_URI_LOCAL;
+  }
+};
+
+const uri = getMongoURI();
 
 const connectDB = async () => {
   try {
@@ -17,9 +31,9 @@ const connectDB = async () => {
       return;
     }
     await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('MongoDB connected');
+    console.log(`✓ MongoDB connected (${process.env.NODE_ENV || 'development'} environment)`);
   } catch (err) {
-    console.error('MongoDB connection error', err.message);
+    console.error('MongoDB connection error:', err.message);
     process.exit(1);
   }
 };
