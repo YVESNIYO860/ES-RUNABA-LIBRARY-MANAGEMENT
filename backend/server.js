@@ -9,8 +9,12 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-connectDB();
-seedAdmin();
+const initializeServer = async () => {
+  await connectDB();
+  await seedAdmin();
+};
+
+initializeServer();
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/teachers', require('./routes/teachers'));
