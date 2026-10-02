@@ -34,4 +34,8 @@ Change the default passwords before using this with real data. Teacher photos ar
 
 ## Deployment
 
-Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `JWT_SECRET` in the backend hosting environment. Set `VITE_API_URL` in the frontend deployment to the deployed backend API URL, ending in `/api`.
+The root `vercel.json` deploys the frontend and Express API as two services in one Vercel project. Import the repository with the project root set to the repository root (`./`).
+
+In **Project Settings > Environment Variables**, add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `JWT_SECRET` for Production (and Preview if needed). Keep the service-role key server-only. Remove any old `VITE_API_URL` value from the Vercel project so the frontend uses the same-domain `/api` route.
+
+After a successful Production deployment, assign the production domain to that project. If the domain still says there is no production deployment, open **Deployments** and fix the latest failed deployment's build log before retrying.
