@@ -51,6 +51,8 @@ button:hover{ opacity:.95 }
 .cart-row{ display:flex; gap:8px; align-items:center; margin:10px 0; flex-wrap:wrap }
 .cards{ display:flex; gap:12px; flex-wrap:wrap }
 .cards .card{ padding:14px; flex:1; min-width:160px }
+.dashboard-summary{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; width:100% }
+.dashboard-summary .card{ min-width:0; margin-bottom:0 }
 .logout{ margin-top:24px; background:#c0392b; color:#fff; border:none; padding:10px 12px; width:100%; text-align:left }
 .meta{ margin:12px 0 18px; color:#4d5e77; font-size:0.95rem }
 .search{ width:100%; max-width:420px; padding:10px 12px; border-radius:10px; border:1px solid rgba(15,71,133,.16); margin-bottom:18px; box-shadow:0 8px 24px rgba(11,83,148,.04); }
@@ -80,6 +82,10 @@ button:hover{ opacity:.95 }
   .card.small{ flex-direction:column; align-items:stretch }
   .table th, .table td{ padding:10px }
   .cards{ flex-direction:column }
+  .dashboard-summary{ grid-template-columns:1fr; }
+  .dashboard-summary .card{ width:100%; }
+  .page-header{ flex-direction:column; align-items:stretch }
+  .page-header .action-note{ max-width:none }
 }
 
 @media (max-width: 600px) {

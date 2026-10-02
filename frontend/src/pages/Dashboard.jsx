@@ -48,7 +48,7 @@ export default function Dashboard() {
     <div>
       <Loader active={loading} title="ES RUNABA Library — Dashboard" message={message} />
       <h2>Dashboard</h2>
-      <div className="cards">
+      <div className="dashboard-summary cards">
         <div className="card">Total books: <strong>{stats.totalBooks}</strong></div>
         <div className="card">Available: <strong>{stats.available}</strong></div>
         <div className="card">Teachers: <strong>{stats.totalTeachers}</strong></div>
