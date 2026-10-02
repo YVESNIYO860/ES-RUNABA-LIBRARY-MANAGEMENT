@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { post } from '../api'
+import Footer from '../components/Footer'
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -24,6 +25,7 @@ export default function Login({ onLogin }) {
         <input placeholder="password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
         <button>Login</button>
       </form>
+      <Footer />
     </div>
   )
 }

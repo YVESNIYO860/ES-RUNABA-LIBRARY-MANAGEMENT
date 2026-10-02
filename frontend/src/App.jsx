@@ -8,6 +8,7 @@ import Borrow from './pages/Borrow'
 import Returns from './pages/Returns'
 import Login from './pages/Login'
 import Sidebar from './components/Sidebar'
+import Footer from './components/Footer'
 
 // New Computer Lab Manager pages
 import ComputerDashboard from './pages/ComputerDashboard'
@@ -68,14 +69,17 @@ export default function App() {
       <div className="app">
         <Sidebar onLogout={handleLogout} role={role} />
         <main className="main">
-          <Routes>
-            <Route path="/" element={<ComputerDashboard />} />
-            <Route path="/computers" element={<Computers />} />
-            <Route path="/teachers" element={<Teachers />} />
-            <Route path="/borrow" element={<ComputerBorrow />} />
-            <Route path="/returns" element={<ComputerReturns />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <div className="main-content">
+            <Routes>
+              <Route path="/" element={<ComputerDashboard />} />
+              <Route path="/computers" element={<Computers />} />
+              <Route path="/teachers" element={<Teachers />} />
+              <Route path="/borrow" element={<ComputerBorrow />} />
+              <Route path="/returns" element={<ComputerReturns />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+          <Footer />
         </main>
       </div>
     )
@@ -85,15 +89,18 @@ export default function App() {
     <div className="app">
       <Sidebar onLogout={handleLogout} role={role} />
       <main className="main">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/books" element={<Books />} />
-          <Route path="/teachers" element={<Teachers />} />
-          <Route path="/classes" element={<Classes />} />
-          <Route path="/borrow" element={<Borrow />} />
-          <Route path="/returns" element={<Returns />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <div className="main-content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/books" element={<Books />} />
+            <Route path="/teachers" element={<Teachers />} />
+            <Route path="/classes" element={<Classes />} />
+            <Route path="/borrow" element={<Borrow />} />
+            <Route path="/returns" element={<Returns />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <Footer />
       </main>
     </div>
   )
