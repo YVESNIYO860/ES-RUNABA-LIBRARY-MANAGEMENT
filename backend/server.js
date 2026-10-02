@@ -13,7 +13,7 @@ app.use('/uploads', express.static('uploads'));
 
 const initializeServer = async () => {
   if (!isSupabaseConfigured()) {
-    console.warn('Supabase is not configured — add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to backend/.env');
+    console.warn('Supabase is not configured — add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to the runtime environment');
     return;
   }
   await seedAdmin();

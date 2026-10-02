@@ -8,7 +8,7 @@ function isSupabaseConfigured() {
 
 function getSupabase() {
   if (!isSupabaseConfigured()) {
-    const error = new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env.');
+    const error = new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the runtime environment.');
     error.statusCode = 503;
     throw error;
   }
