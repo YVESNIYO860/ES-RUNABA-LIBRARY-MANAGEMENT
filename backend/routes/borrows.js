@@ -1,86 +1,80 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Borrow = require('../models/Borrow');
-const Book = require('../models/Book');
-const Teacher = require('../models/Teacher');
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create borrow transaction (cart-style)
+const borrowSelect = '*, teacher:teachers(*), books:borrow_items(*, book:books(*))';
+
+async function findBorrow(db, id) {
+  const { data, error } = await db.from('borrows').select(borrowSelect).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+function withOverdue(borrow) {
+  if (!borrow) return borrow;
+  const result = toApi(borrow);
+  result.overdue = new Date(result.dueDate) < new Date() && result.books.some(item => item.returned < item.quantity);
+  return result;
+}
+
 router.post('/', auth, async (req, res) => {
   try {
     const { teacherId, books, dueDate } = req.body;
-    const teacher = await Teacher.findById(teacherId);
-    if (!teacher) return res.status(400).json({ msg: 'Teacher not found' });
-
-    // books: [{ bookId, quantity }]
-    const bookEntries = [];
-    for (const b of books) {
-      const book = await Book.findById(b.bookId);
-      if (!book) return res.status(400).json({ msg: `Book not found ${b.bookId}` });
-      const qty = Number(b.quantity) || 1;
-      if (book.available < qty) return res.status(400).json({ msg: `Not enough stock for ${book.title}` });
-      book.available -= qty;
-      await book.save();
-      bookEntries.push({ book: book._id, title: book.title, quantity: qty });
+    if (!teacherId || !dueDate || !Array.isArray(books)) {
+      return res.status(400).json({ msg: 'Teacher, books, and due date are required' });
     }
-
-    const borrow = new Borrow({ teacher: teacher._id, books: bookEntries, dueDate });
-    await borrow.save();
-    res.json(borrow);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const db = getSupabase();
+    const { data: id, error } = await db.rpc('create_book_borrow', {
+      p_teacher_id: teacherId,
+      p_books: books,
+      p_due_date: dueDate
+    });
+    if (error) throw error;
+    const borrow = await findBorrow(db, id);
+    return res.json(toApi(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// List all borrows
 router.get('/', auth, async (req, res) => {
-  const list = await Borrow.find().populate('teacher').populate('books.book').sort({ date: -1 });
-  const now = new Date();
-  const ret = list.map(b => {
-    const overdue = new Date(b.dueDate) < now && b.books.some(x => x.returned < x.quantity);
-    return { ...b.toObject(), overdue };
-  });
-  res.json(ret);
+  try {
+    const { data, error } = await getSupabase().from('borrows').select(borrowSelect).order('date', { ascending: false });
+    if (error) throw error;
+    return res.json(data.map(withOverdue));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Return books (partial returns allowed)
 router.post('/:id/return', auth, async (req, res) => {
   try {
-    const { returns } = req.body; // [{ bookId, quantity }]
-    const borrow = await Borrow.findById(req.params.id).populate('books.book');
+    const { returns } = req.body;
+    if (!Array.isArray(returns)) return res.status(400).json({ msg: 'Returns must be a list' });
+    const db = getSupabase();
+    const { error } = await db.rpc('return_book_borrow', {
+      p_borrow_id: req.params.id,
+      p_returns: returns
+    });
+    if (error) throw error;
+    const borrow = await findBorrow(db, req.params.id);
     if (!borrow) return res.status(404).json({ msg: 'Not found' });
-
-    for (const r of returns) {
-      const entry = borrow.books.find(e => String(e.book._id) === String(r.bookId));
-      if (!entry) return res.status(400).json({ msg: 'Book entry not in borrow' });
-      const q = Number(r.quantity) || 0;
-      const canReturn = Math.min(q, entry.quantity - entry.returned);
-      entry.returned += canReturn;
-      // restore stock
-      const book = await Book.findById(entry.book._id);
-      book.available = Math.min(book.total, book.available + canReturn);
-      await book.save();
-    }
-
-    // update status
-    const allReturned = borrow.books.every(e => e.returned >= e.quantity);
-    if (allReturned) borrow.status = 'returned';
-    await borrow.save();
-    res.json(borrow);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    return res.json(toApi(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Get single borrow
 router.get('/:id', auth, async (req, res) => {
-  const b = await Borrow.findById(req.params.id).populate('teacher').populate('books.book');
-  if (!b) return res.status(404).json({ msg: 'Not found' });
-  const now = new Date();
-  const overdue = new Date(b.dueDate) < now && b.books.some(x => x.returned < x.quantity);
-  res.json({ ...b.toObject(), overdue });
+  try {
+    const borrow = await findBorrow(getSupabase(), req.params.id);
+    if (!borrow) return res.status(404).json({ msg: 'Not found' });
+    return res.json(withOverdue(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
 module.exports = router;

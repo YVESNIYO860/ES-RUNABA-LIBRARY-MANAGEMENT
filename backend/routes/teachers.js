@@ -1,55 +1,71 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Teacher = require('../models/Teacher');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create
 router.post('/', auth, upload.single('photo'), async (req, res) => {
   try {
     const { fullName, phone, email } = req.body;
-    const photo = req.file ? req.file.path : undefined;
-    const teacher = new Teacher({ fullName, phone, email, photo });
-    await teacher.save();
-    res.json(teacher);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('teachers').insert({
+      full_name: fullName,
+      phone,
+      email,
+      photo: req.file ? req.file.path : null
+    }).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Read all
 router.get('/', auth, async (req, res) => {
-  const list = await Teacher.find().sort({ fullName: 1 });
-  res.json(list);
+  try {
+    const { data, error } = await getSupabase().from('teachers').select('*').order('full_name', { ascending: true });
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Read one
 router.get('/:id', auth, async (req, res) => {
-  const t = await Teacher.findById(req.params.id);
-  if (!t) return res.status(404).json({ msg: 'Not found' });
-  res.json(t);
+  try {
+    const { data, error } = await getSupabase().from('teachers').select('*').eq('id', req.params.id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Update
 router.put('/:id', auth, upload.single('photo'), async (req, res) => {
   try {
     const { fullName, phone, email } = req.body;
-    const update = { fullName, phone, email };
+    const update = { full_name: fullName, phone, email };
     if (req.file) update.photo = req.file.path;
-    const t = await Teacher.findByIdAndUpdate(req.params.id, update, { new: true });
-    res.json(t);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('teachers').update(update)
+      .eq('id', req.params.id).select('*').maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Delete
 router.delete('/:id', auth, async (req, res) => {
-  await Teacher.findByIdAndDelete(req.params.id);
-  res.json({ msg: 'Deleted' });
+  try {
+    const { error } = await getSupabase().from('teachers').delete().eq('id', req.params.id);
+    if (error) throw error;
+    return res.json({ msg: 'Deleted' });
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
 module.exports = router;

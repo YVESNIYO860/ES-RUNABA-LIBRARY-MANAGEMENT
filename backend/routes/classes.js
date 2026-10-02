@@ -1,56 +1,73 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const ClassLevel = require('../models/ClassLevel');
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create a class entry
 router.post('/', auth, async (req, res) => {
   try {
     const { level, combination, description } = req.body;
     if (!level) return res.status(400).json({ msg: 'Class level is required.' });
-    const existing = await ClassLevel.findOne({ level, combination: combination || '' });
+    const db = getSupabase();
+    const { data: existing, error: findError } = await db.from('classes')
+      .select('id').eq('level', level).eq('combination', combination || '').maybeSingle();
+    if (findError) throw findError;
     if (existing) return res.status(400).json({ msg: 'This class and combination already exists.' });
 
-    const classItem = new ClassLevel({ level, combination: combination || '', description: description || '' });
-    await classItem.save();
-    res.json(classItem);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await db.from('classes').insert({
+      level, combination: combination || '', description: description || ''
+    }).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Get all classes
 router.get('/', auth, async (req, res) => {
-  const items = await ClassLevel.find().sort({ level: 1, combination: 1 });
-  res.json(items);
+  try {
+    const { data, error } = await getSupabase().from('classes').select('*')
+      .order('level', { ascending: true }).order('combination', { ascending: true });
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Get single class
 router.get('/:id', auth, async (req, res) => {
-  const item = await ClassLevel.findById(req.params.id);
-  if (!item) return res.status(404).json({ msg: 'Class not found' });
-  res.json(item);
+  try {
+    const { data, error } = await getSupabase().from('classes').select('*').eq('id', req.params.id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Class not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Update class entry
 router.put('/:id', auth, async (req, res) => {
   try {
     const { level, combination, description } = req.body;
-    const update = { level, combination: combination || '', description: description || '' };
-    const item = await ClassLevel.findByIdAndUpdate(req.params.id, update, { new: true });
-    if (!item) return res.status(404).json({ msg: 'Class not found' });
-    res.json(item);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('classes').update({
+      level, combination: combination || '', description: description || ''
+    }).eq('id', req.params.id).select('*').maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Class not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Delete class entry
 router.delete('/:id', auth, async (req, res) => {
-  await ClassLevel.findByIdAndDelete(req.params.id);
-  res.json({ msg: 'Deleted' });
+  try {
+    const { error } = await getSupabase().from('classes').delete().eq('id', req.params.id);
+    if (error) throw error;
+    return res.json({ msg: 'Deleted' });
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
 module.exports = router;

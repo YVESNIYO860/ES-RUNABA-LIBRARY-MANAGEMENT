@@ -1,107 +1,80 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const ComputerBorrow = require('../models/ComputerBorrow');
-const Computer = require('../models/Computer');
-const Teacher = require('../models/Teacher');
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create computer/cable borrow transaction
+const borrowSelect = '*, teacher:teachers(*), items:computer_borrow_items(*, computer:computers(*))';
+
+async function findBorrow(db, id) {
+  const { data, error } = await db.from('computer_borrows').select(borrowSelect).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+function withOverdue(borrow) {
+  if (!borrow) return borrow;
+  const result = toApi(borrow);
+  result.overdue = new Date(result.dueDate) < new Date() && result.items.some(item => item.returned < item.quantity);
+  return result;
+}
+
 router.post('/', auth, async (req, res) => {
   try {
     const { teacherId, items, dueDate } = req.body;
-    const teacher = await Teacher.findById(teacherId);
-    if (!teacher) return res.status(400).json({ msg: 'Teacher not found' });
-
-    // items: [{ computerId, quantity }]
-    const itemEntries = [];
-    for (const item of items) {
-      const comp = await Computer.findById(item.computerId);
-      if (!comp) return res.status(400).json({ msg: `Item not found ${item.computerId}` });
-      const qty = Number(item.quantity) || 1;
-      if (comp.available < qty) {
-        return res.status(400).json({ msg: `Not enough stock available for ${comp.name}` });
-      }
-      comp.available -= qty;
-      await comp.save();
-      itemEntries.push({ computer: comp._id, quantity: qty, returned: 0 });
+    if (!teacherId || !dueDate || !Array.isArray(items)) {
+      return res.status(400).json({ msg: 'Teacher, items, and due date are required' });
     }
-
-    const borrow = new ComputerBorrow({
-      teacher: teacher._id,
-      items: itemEntries,
-      dueDate
+    const db = getSupabase();
+    const { data: id, error } = await db.rpc('create_computer_borrow', {
+      p_teacher_id: teacherId,
+      p_items: items,
+      p_due_date: dueDate
     });
-    await borrow.save();
-    res.json(borrow);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    if (error) throw error;
+    const borrow = await findBorrow(db, id);
+    return res.json(toApi(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// List all computer/cable borrows
 router.get('/', auth, async (req, res) => {
   try {
-    const list = await ComputerBorrow.find()
-      .populate('teacher')
-      .populate('items.computer')
-      .sort({ date: -1 });
-    const now = new Date();
-    const ret = list.map(b => {
-      const overdue = new Date(b.dueDate) < now && b.items.some(x => x.returned < x.quantity);
-      return { ...b.toObject(), overdue };
-    });
-    res.json(ret);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('computer_borrows')
+      .select(borrowSelect).order('date', { ascending: false });
+    if (error) throw error;
+    return res.json(data.map(withOverdue));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Return computer/cable (partial returns allowed)
 router.post('/:id/return', auth, async (req, res) => {
   try {
-    const { returns } = req.body; // [{ computerId, quantity }]
-    const borrow = await ComputerBorrow.findById(req.params.id).populate('items.computer');
+    const { returns } = req.body;
+    if (!Array.isArray(returns)) return res.status(400).json({ msg: 'Returns must be a list' });
+    const db = getSupabase();
+    const { error } = await db.rpc('return_computer_borrow', {
+      p_borrow_id: req.params.id,
+      p_returns: returns
+    });
+    if (error) throw error;
+    const borrow = await findBorrow(db, req.params.id);
     if (!borrow) return res.status(404).json({ msg: 'Borrow transaction not found' });
-
-    for (const r of returns) {
-      const entry = borrow.items.find(e => String(e.computer._id) === String(r.computerId));
-      if (!entry) return res.status(400).json({ msg: 'Item entry not in borrow record' });
-      const q = Number(r.quantity) || 0;
-      const canReturn = Math.min(q, entry.quantity - entry.returned);
-      entry.returned += canReturn;
-
-      // restore stock
-      const comp = await Computer.findById(entry.computer._id);
-      comp.available = Math.min(comp.total, comp.available + canReturn);
-      await comp.save();
-    }
-
-    // update status
-    const allReturned = borrow.items.every(e => e.returned >= e.quantity);
-    if (allReturned) borrow.status = 'returned';
-    await borrow.save();
-    res.json(borrow);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    return res.json(toApi(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Get single borrow transaction
 router.get('/:id', auth, async (req, res) => {
   try {
-    const b = await ComputerBorrow.findById(req.params.id)
-      .populate('teacher')
-      .populate('items.computer');
-    if (!b) return res.status(404).json({ msg: 'Not found' });
-    const now = new Date();
-    const overdue = new Date(b.dueDate) < now && b.items.some(x => x.returned < x.quantity);
-    res.json({ ...b.toObject(), overdue });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const borrow = await findBorrow(getSupabase(), req.params.id);
+    if (!borrow) return res.status(404).json({ msg: 'Not found' });
+    return res.json(withOverdue(borrow));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 

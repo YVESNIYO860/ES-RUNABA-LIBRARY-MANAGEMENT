@@ -48,7 +48,7 @@ export default function Sidebar({ onLogout, role }) {
           </>
         )}
       </nav>
-      <button type="button" onClick={logout} className="logout">Back</button>
+      <button type="button" onClick={logout} className="logout">Logout</button>
     </aside>
   )
 }

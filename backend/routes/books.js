@@ -1,70 +1,80 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Book = require('../models/Book');
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create book
 router.post('/', auth, async (req, res) => {
   try {
     const { title, author, category, total, bookId } = req.body;
     const totalNum = Number(total) || 1;
-    const book = new Book({ title, author, category, total: totalNum, available: totalNum, bookId });
-    await book.save();
-    res.json(book);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('books').insert({
+      title, author, category: category || 'General', total: totalNum, available: totalNum, book_id: bookId
+    }).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Update stock/details
 router.put('/:id', auth, async (req, res) => {
   try {
+    const db = getSupabase();
+    const { data: current, error: findError } = await db.from('books').select('*').eq('id', req.params.id).maybeSingle();
+    if (findError) throw findError;
+    if (!current) return res.status(404).json({ msg: 'Not found' });
+
     const { title, author, category, total } = req.body;
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ msg: 'Not found' });
-    if (title) book.title = title;
-    if (author) book.author = author;
-    if (category) book.category = category;
+    const update = {};
+    if (title) update.title = title;
+    if (author !== undefined) update.author = author;
+    if (category) update.category = category;
     if (total) {
-      const newTotal = Number(total);
-      const diff = newTotal - book.total;
-      book.total = newTotal;
-      book.available = Math.max(0, book.available + diff);
+      update.total = Number(total);
+      update.available = Math.max(0, current.available + update.total - current.total);
     }
-    await book.save();
-    res.json(book);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await db.from('books').update(update).eq('id', req.params.id).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// List/search
 router.get('/', auth, async (req, res) => {
-  const { q } = req.query;
-  const filter = {};
-  if (q) {
-    filter.$or = [
-      { title: new RegExp(q, 'i') },
-      { bookId: new RegExp(q, 'i') }
-    ];
+  try {
+    const { data, error } = await getSupabase().from('books').select('*').order('title', { ascending: true });
+    if (error) throw error;
+    const query = String(req.query.q || '').toLowerCase();
+    const list = query ? data.filter(book =>
+      book.title.toLowerCase().includes(query) || book.book_id.toLowerCase().includes(query)
+    ) : data;
+    return res.json(toApi(list));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
-  const list = await Book.find(filter).sort({ title: 1 });
-  res.json(list);
 });
 
-// Get one
 router.get('/:id', auth, async (req, res) => {
-  const book = await Book.findById(req.params.id);
-  if (!book) return res.status(404).json({ msg: 'Not found' });
-  res.json(book);
+  try {
+    const { data, error } = await getSupabase().from('books').select('*').eq('id', req.params.id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
-// Delete
 router.delete('/:id', auth, async (req, res) => {
-  await Book.findByIdAndDelete(req.params.id);
-  res.json({ msg: 'Deleted' });
+  try {
+    const { error } = await getSupabase().from('books').delete().eq('id', req.params.id);
+    if (error) throw error;
+    return res.json({ msg: 'Deleted' });
+  } catch (error) {
+    return sendSupabaseError(res, error);
+  }
 });
 
 module.exports = router;

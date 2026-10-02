@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');
 const seedAdmin = require('./utils/seedAdmin');
+const { isSupabaseConfigured } = require('./config/supabase');
 
 const app = express();
 app.use(cors());
@@ -10,7 +10,10 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 const initializeServer = async () => {
-  await connectDB();
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase is not configured — add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to backend/.env');
+    return;
+  }
   await seedAdmin();
 };
 

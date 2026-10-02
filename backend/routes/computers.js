@@ -1,100 +1,86 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Computer = require('../models/Computer');
+const { getSupabase } = require('../config/supabase');
+const { toApi, sendSupabaseError } = require('../utils/apiHelpers');
 
-// Create computer or cable
 router.post('/', auth, async (req, res) => {
   try {
     const { name, serialNumber, type, total } = req.body;
-    if (!name || !serialNumber) {
-      return res.status(400).json({ msg: 'Name and serial number are required' });
-    }
-    const existing = await Computer.findOne({ serialNumber });
-    if (existing) {
-      return res.status(400).json({ msg: 'A computer or cable with this serial number already exists' });
-    }
+    if (!name || !serialNumber) return res.status(400).json({ msg: 'Name and serial number are required' });
     const totalNum = Number(total) || 1;
-    const item = new Computer({
+    const { data, error } = await getSupabase().from('computers').insert({
       name,
-      serialNumber,
+      serial_number: serialNumber,
       type: type || 'computer',
       total: totalNum,
       available: totalNum
-    });
-    await item.save();
-    res.json(item);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    }).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Update computer details or stock
 router.put('/:id', auth, async (req, res) => {
   try {
+    const db = getSupabase();
+    const { data: current, error: findError } = await db.from('computers').select('*').eq('id', req.params.id).maybeSingle();
+    if (findError) throw findError;
+    if (!current) return res.status(404).json({ msg: 'Not found' });
+
     const { name, serialNumber, type, total } = req.body;
-    const item = await Computer.findById(req.params.id);
-    if (!item) return res.status(404).json({ msg: 'Not found' });
-    if (name) item.name = name;
-    if (serialNumber) item.serialNumber = serialNumber;
-    if (type) item.type = type;
+    const update = {};
+    if (name) update.name = name;
+    if (serialNumber) update.serial_number = serialNumber;
+    if (type) update.type = type;
     if (total !== undefined) {
-      const newTotal = Number(total);
-      const diff = newTotal - item.total;
-      item.total = newTotal;
-      item.available = Math.max(0, item.available + diff);
+      update.total = Number(total);
+      update.available = Math.max(0, current.available + update.total - current.total);
     }
-    await item.save();
-    res.json(item);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await db.from('computers').update(update).eq('id', req.params.id).select('*').single();
+    if (error) throw error;
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// List and search
 router.get('/', auth, async (req, res) => {
   try {
-    const { q, type } = req.query;
-    const filter = {};
-    if (q) {
-      filter.$or = [
-        { name: new RegExp(q, 'i') },
-        { serialNumber: new RegExp(q, 'i') }
-      ];
-    }
-    if (type) {
-      filter.type = type;
-    }
-    const list = await Computer.find(filter).sort({ name: 1 });
-    res.json(list);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    let query = getSupabase().from('computers').select('*').order('name', { ascending: true });
+    if (req.query.type) query = query.eq('type', req.query.type);
+    const { data, error } = await query;
+    if (error) throw error;
+    const search = String(req.query.q || '').toLowerCase();
+    const list = search ? data.filter(item =>
+      item.name.toLowerCase().includes(search) || item.serial_number.toLowerCase().includes(search)
+    ) : data;
+    return res.json(toApi(list));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Get single item
 router.get('/:id', auth, async (req, res) => {
   try {
-    const item = await Computer.findById(req.params.id);
-    if (!item) return res.status(404).json({ msg: 'Not found' });
-    res.json(item);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { data, error } = await getSupabase().from('computers').select('*').eq('id', req.params.id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ msg: 'Not found' });
+    return res.json(toApi(data));
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
-// Delete item
 router.delete('/:id', auth, async (req, res) => {
   try {
-    await Computer.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    const { error } = await getSupabase().from('computers').delete().eq('id', req.params.id);
+    if (error) throw error;
+    return res.json({ msg: 'Deleted' });
+  } catch (error) {
+    return sendSupabaseError(res, error);
   }
 });
 
